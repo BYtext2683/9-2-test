@@ -1,0 +1,13 @@
+<resources>
+
+    <string name="app_name">媒体相册</string>
+
+    <string name="hint_quick_select">快速选择已开启：轻点图片即可选中，再点一次取消</string>
+    <string name="empty_grid">还没有任何文件\n点右下角 ＋ 导入 webp / mp4</string>
+    <string name="msg_rename_one_only">请只选中一个文件再重命名</string>
+    <string name="msg_nothing_selected">还没有选中任何文件</string>
+    <string name="subtitle_anim_image">轻点画面暂停 / 继续</string>
+    <string name="subtitle_static_image">静态图片</string>
+    <string name="subtitle_video">轻点画面显示播放控制条</string>
+
+</resources>
