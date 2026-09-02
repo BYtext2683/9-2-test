@@ -33,7 +33,8 @@ jobs:
           echo "$PWD/gradle-8.9/bin" >> "$GITHUB_PATH"
 
       - name: Build debug APK
-        run: gradle :app:assembleDebug --no-daemon --stacktrace
+                run: cd MediaAlbum && gradle :app:assembleDebug --no-daemon --stacktrace
+
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
