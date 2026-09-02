@@ -1,0 +1,36 @@
+<resources>
+
+    <!--
+      MaterialComponents 主题（非 Material3），与项目用到的
+      MaterialToolbar / MaterialCardView / MaterialButton / Chip 完全兼容。
+    -->
+    <style name="Theme.MediaAlbum" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimaryDark">@color/purple_700</item>
+        <item name="colorAccent">@color/teal_200</item>
+        <item name="colorSecondary">@color/purple_200</item>
+        <item name="android:statusBarColor">@color/purple_700</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- 播放页：黑底全屏 -->
+    <style name="Theme.MediaAlbum.Player" parent="Theme.MediaAlbum">
+        <item name="android:statusBarColor">@android:color/black</item>
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:colorBackground">@android:color/black</item>
+    </style>
+
+    <!-- 底部多选操作条里的文字按钮 -->
+    <style name="Widget.MediaAlbum.BarButton" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textSize">13sp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:paddingLeft">8dp</item>
+        <item name="android:paddingRight">8dp</item>
+        <item name="iconPadding">2dp</item>
+        <item name="iconGravity">textStart</item>
+    </style>
+
+</resources>

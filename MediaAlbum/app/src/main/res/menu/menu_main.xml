@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- 快速多选入口：常驻工具栏，点一下即进入"轻点即选中"模式 -->
+    <item
+        android:id="@+id/action_quick_select"
+        android:icon="@drawable/ic_select_all"
+        android:title="快速多选"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_sort"
+        android:icon="@drawable/ic_sort"
+        android:title="排序"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_import_files"
+        android:icon="@drawable/ic_import_file"
+        android:title="导入文件"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_import_folder"
+        android:icon="@drawable/ic_import_folder"
+        android:title="导入整个文件夹"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_manage_albums"
+        android:title="管理分类"
+        app:showAsAction="never" />
+
+</menu>
