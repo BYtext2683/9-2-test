@@ -14,7 +14,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
-import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaItem as PlayerMediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -103,7 +103,7 @@ class PlayerPageFragment : Fragment() {
 
         b.playerView.player = exo
 
-        exo.setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
+       exo.setMediaItem(PlayerMediaItem.fromUri(Uri.fromFile(file)))
         exo.repeatMode = Player.REPEAT_MODE_ONE
         exo.playWhenReady = true
         exo.prepare()
