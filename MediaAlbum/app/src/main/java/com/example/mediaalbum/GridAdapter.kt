@@ -42,11 +42,12 @@ class GridAdapter(
     }
 
     fun setSelection(sel: Set<Long>) {
+        val newSel = sel.toSet()
         val old = selection
-        if (old.size == sel.size && old.containsAll(sel)) return
-        selection = sel
+        if (old.size == newSel.size && old.containsAll(newSel)) return
+        selection = newSel
         currentList.forEachIndexed { index, item ->
-            if (old.contains(item.id) != sel.contains(item.id)) notifyItemChanged(index, PAYLOAD_SELECTION)
+            if (old.contains(item.id) != newSel.contains(item.id)) notifyItemChanged(index, PAYLOAD_SELECTION)
         }
     }
 
@@ -129,11 +130,29 @@ class GridAdapter(
                 true
             }
         }
+
+        /** 仅更新选中/未选中相关视图，避免整张图片重新加载闪烁。 */
+        fun updateSelection(item: MediaItem) {
+            val selected = selection.contains(item.id)
+            b.ivCheck.visibility = if (selected) android.view.View.VISIBLE else android.view.View.GONE
+            b.ivRing.visibility =
+                if (quickSelect && !selected) android.view.View.VISIBLE else android.view.View.GONE
+            b.card.strokeWidth = if (selected) 4 else 0
+            b.card.alpha = if (selected) 0.7f else 1f
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val b = ItemMediaBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return VH(b)
+    }
+
+    override fun onBindViewHolder(holder: VH, position: Int, payloads: MutableList<Any>) {
+        if (payloads.contains(PAYLOAD_SELECTION)) {
+            holder.updateSelection(getItem(position))
+        } else {
+            super.onBindViewHolder(holder, position, payloads)
+        }
     }
 
     override fun onBindViewHolder(holder: VH, position: Int) = holder.bind(getItem(position))
