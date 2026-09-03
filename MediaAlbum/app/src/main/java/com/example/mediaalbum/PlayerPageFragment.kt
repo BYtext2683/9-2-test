@@ -103,7 +103,7 @@ class PlayerPageFragment : Fragment() {
 
         b.playerView.player = exo
 
-       exo.setMediaItem(PlayerMediaItem.fromUri(Uri.fromFile(file)))
+        exo.setMediaItem(PlayerMediaItem.fromUri(Uri.fromFile(file)))
         exo.repeatMode = Player.REPEAT_MODE_ONE
         exo.playWhenReady = true
         exo.prepare()

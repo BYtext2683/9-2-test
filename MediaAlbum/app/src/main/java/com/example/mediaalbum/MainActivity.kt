@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.example.mediaalbum.data.Album
+import com.example.mediaalbum.data.ImportProgress
 import com.example.mediaalbum.data.MediaItem
 import com.example.mediaalbum.databinding.ActivityMainBinding
 import com.example.mediaalbum.databinding.DialogTextInputBinding
@@ -96,6 +97,9 @@ class MainActivity : AppCompatActivity() {
         }
         lifecycleScope.launch {
             viewModel.messages.collect { Toast.makeText(this@MainActivity, it, Toast.LENGTH_SHORT).show() }
+        }
+        lifecycleScope.launch {
+            viewModel.importProgress.collect { updateImportProgress(it) }
         }
     }
 
@@ -180,6 +184,21 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateEmptyState() {
         binding.tvEmpty.visibility = if (adapter.itemCount == 0) View.VISIBLE else View.GONE
+    }
+
+    private fun updateImportProgress(progress: ImportProgress?) {
+        if (progress == null) {
+            binding.cardProgress.visibility = View.GONE
+            return
+        }
+        binding.cardProgress.visibility = View.VISIBLE
+        val percent = if (progress.total > 0) (progress.current * 100 / progress.total) else 0
+        binding.progressBar.progress = percent.coerceIn(0, 100)
+        binding.tvProgressCount.text = "${progress.current} / ${progress.total}"
+        binding.tvProgressTitle.text = when (progress.stage) {
+            "checking" -> "正在检查重复文件…"
+            else -> "正在导入：${progress.current}/${progress.total}"
+        }
     }
 
     // ---------------- album chips ----------------

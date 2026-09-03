@@ -10,9 +10,16 @@ import com.example.mediaalbum.util.FileStore
 import com.example.mediaalbum.util.MimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlin.math.roundToInt
 import java.io.File
+import kotlin.math.roundToInt
+
 data class ImportResult(val imported: Int, val skipped: Int)
+
+data class ImportProgress(
+    val current: Int,
+    val total: Int,
+    val stage: String
+)
 
 class AlbumRepository(
     private val app: Application,
@@ -28,17 +35,25 @@ class AlbumRepository(
 
     // ---------------- import ----------------
 
-    suspend fun importFrom(uris: List<Uri>, albumId: Long?): ImportResult {
+    suspend fun importFrom(
+        uris: List<Uri>,
+        albumId: Long?,
+        onProgress: (ImportProgress) -> Unit = {}
+    ): ImportResult {
         val picked = uris.mapNotNull { uri ->
             val name = queryName(uri)
             val mime = MimeUtils.normalize(name, resolver.getType(uri))
             if (mime == null) null else Triple(uri, name ?: defaultName(mime), mime)
         }
-        return importPicked(picked, albumId, skipped = uris.size - picked.size)
+        return importPicked(picked, albumId, skipped = uris.size - picked.size, onProgress)
     }
 
     /** 从「选择文件夹」得到的树 URI 里递归找受支持的文件后导入。 */
-    suspend fun importFromTree(treeUri: Uri, albumId: Long?): ImportResult =
+    suspend fun importFromTree(
+        treeUri: Uri,
+        albumId: Long?,
+        onProgress: (ImportProgress) -> Unit = {}
+    ): ImportResult =
         withContext(Dispatchers.IO) {
             val rootDir = try {
                 DocumentFile.fromTreeUri(app, treeUri)
@@ -55,7 +70,7 @@ class AlbumRepository(
                 val mime = MimeUtils.normalize(name, resolver.getType(uri))
                 if (mime == null) null else Triple(uri, name ?: defaultName(mime), mime)
             }
-            importPicked(picked, albumId, skipped = found.size - picked.size)
+            importPicked(picked, albumId, skipped = found.size - picked.size, onProgress)
         }
 
     private fun collect(dir: DocumentFile, out: MutableList<Uri>, depth: Int) {
@@ -75,12 +90,25 @@ class AlbumRepository(
     private suspend fun importPicked(
         picked: List<Triple<Uri, String, String>>,
         albumId: Long?,
-        skipped: Int
+        skipped: Int,
+        onProgress: (ImportProgress) -> Unit = {}
     ): ImportResult = withContext(Dispatchers.IO) {
         var imported = 0
+        var duplicates = 0
+        var copyFailed = 0
         var pos = db.mediaItemDao().maxPosition()
+        val total = picked.size
 
-        for ((uri, originalName, mime) in picked) {
+        picked.forEachIndexed { index, (uri, originalName, mime) ->
+            onProgress(ImportProgress(current = index + 1, total = total, stage = "checking"))
+
+            // 1) 预检重复：URI 能查到 size 且数据库已有同名同大小记录
+            val remoteSize = querySize(uri)
+            if (remoteSize > 0 && db.mediaItemDao().countByOriginalNameAndSize(originalName, remoteSize) > 0) {
+                duplicates += 1
+                return@forEachIndexed
+            }
+
             pos += 1
             val dest = FileStore.newFile(originalName)
             val copied = try {
@@ -92,14 +120,25 @@ class AlbumRepository(
             }
             if (!copied) {
                 runCatching { dest.delete() }
-                continue
+                copyFailed += 1
+                return@forEachIndexed
             }
 
             val size = dest.length()
             if (size <= 0L) {                       // 空文件 / 读取失败，不入库
                 runCatching { dest.delete() }
-                continue
+                copyFailed += 1
+                return@forEachIndexed
             }
+
+            // 2) 复制后再查一次重复（部分 URI 不返回 size，需以实际文件大小为准）
+            if (db.mediaItemDao().countByOriginalNameAndSize(originalName, size) > 0) {
+                duplicates += 1
+                runCatching { dest.delete() }
+                return@forEachIndexed
+            }
+
+            onProgress(ImportProgress(current = index + 1, total = total, stage = "processing"))
 
             // 视频：预先生成一张首帧缩略图，网格里直接读 JPEG，滚动更顺
             var thumbName: String? = null
@@ -121,7 +160,7 @@ class AlbumRepository(
             db.mediaItemDao().insert(item)
             imported += 1
         }
-        ImportResult(imported, skipped + (picked.size - imported))
+        ImportResult(imported, skipped + duplicates + copyFailed)
     }
 
     // ---------------- rename / album / delete ----------------
@@ -208,6 +247,17 @@ class AlbumRepository(
         }
         if (name.isNullOrBlank()) name = uri.lastPathSegment
         return name
+    }
+
+    private fun querySize(uri: Uri): Long {
+        return try {
+            resolver.query(uri, null, null, null, null)?.use { c ->
+                val idx = c.getColumnIndex(OpenableColumns.SIZE)
+                if (idx >= 0 && c.moveToFirst()) c.getLong(idx) else 0L
+            } ?: 0L
+        } catch (e: Exception) {
+            0L
+        }
     }
 
     private fun defaultName(mime: String): String =

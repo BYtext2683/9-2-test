@@ -26,6 +26,9 @@ interface MediaItemDao {
     @Query("SELECT * FROM media_items WHERE id = :id")
     suspend fun get(id: Long): MediaItem?
 
+    @Query("SELECT COUNT(*) FROM media_items WHERE originalName = :originalName AND fileSize = :fileSize")
+    suspend fun countByOriginalNameAndSize(originalName: String, fileSize: Long): Int
+
     @Query("SELECT COALESCE(MAX(position), 0) FROM media_items")
     suspend fun maxPosition(): Int
 

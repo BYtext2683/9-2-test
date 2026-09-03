@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mediaalbum.data.Album
 import com.example.mediaalbum.data.AlbumRepository
+import com.example.mediaalbum.data.ImportProgress
 import com.example.mediaalbum.data.MediaItem
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -48,6 +49,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val messages: Flow<String> = _messages
 
+    /** 导入进度：null 表示当前没有导入任务 */
+    private val _importProgress = MutableStateFlow<ImportProgress?>(null)
+    val importProgress: StateFlow<ImportProgress?> = _importProgress
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val items: StateFlow<List<MediaItem>> =
         combine(_filter, _sortMode) { filter, mode -> filter to mode }
@@ -78,24 +83,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // ---------------- operations ----------------
 
     fun import(uris: List<Uri>) = viewModelScope.launch {
-        val res = repo.importFrom(uris, currentAlbumIdForImport())
+        _importProgress.value = ImportProgress(0, uris.size, "checking")
+        val res = repo.importFrom(uris, currentAlbumIdForImport()) { progress ->
+            _importProgress.value = progress
+        }
+        _importProgress.value = null
         val msg = if (res.imported == 0) {
-            "没有可导入的文件（已跳过 ${res.skipped} 个不受支持的格式）"
+            "没有可导入的文件（已跳过 ${res.skipped} 个重复或不支持的格式）"
         } else {
             "已导入 ${res.imported} 个" +
-                if (res.skipped > 0) "，跳过 ${res.skipped} 个不支持的文件" else ""
+                if (res.skipped > 0) "，跳过 ${res.skipped} 个重复或不支持的文件" else ""
         }
         _messages.emit(msg)
     }
 
     fun importFolder(treeUri: Uri) = viewModelScope.launch {
         _messages.emit("正在扫描文件夹…")
-        val res = repo.importFromTree(treeUri, currentAlbumIdForImport())
+        _importProgress.value = ImportProgress(0, 1, "checking")
+        val res = repo.importFromTree(treeUri, currentAlbumIdForImport()) { progress ->
+            _importProgress.value = progress
+        }
+        _importProgress.value = null
         val msg = if (res.imported == 0) {
             "这个文件夹里没有可导入的 webp / mp4 等文件"
         } else {
             "已导入 ${res.imported} 个" +
-                if (res.skipped > 0) "，跳过 ${res.skipped} 个不支持的文件" else ""
+                if (res.skipped > 0) "，跳过 ${res.skipped} 个重复或不支持的文件" else ""
         }
         _messages.emit(msg)
     }

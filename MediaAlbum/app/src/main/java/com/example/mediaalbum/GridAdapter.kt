@@ -43,7 +43,7 @@ class GridAdapter(
 
     fun setSelection(sel: Set<Long>) {
         val old = selection
-        if (old == sel) return
+        if (old.size == sel.size && old.containsAll(sel)) return
         selection = sel
         currentList.forEachIndexed { index, item ->
             if (old.contains(item.id) != sel.contains(item.id)) notifyItemChanged(index, PAYLOAD_SELECTION)
