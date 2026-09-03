@@ -38,7 +38,7 @@ data class MediaItem(
 
     val fileSize: Long = 0,
 
-    /** image/* 或 video/* —— 决定用哪种方式播放 */
+    /** MIME 类型（image 或 video）—— 决定用哪种方式播放 */
     val mimeType: String = "image/webp",
 
     /** 自定义排序位置 */

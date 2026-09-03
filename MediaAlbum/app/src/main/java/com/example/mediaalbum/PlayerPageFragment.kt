@@ -30,7 +30,7 @@ import kotlin.math.roundToInt
 
 /**
  * 单页播放：
- *  - video/* -> Media3 ExoPlayer（循环播放）。这是修复 MP4 闪退的关键：
+ *  - video 类型 -> Media3 ExoPlayer（循环播放）。这是修复 MP4 闪退的关键：
  *    旧版用 VideoView/MediaPlayer，它在 ViewPager2 里会因为 SurfaceView 生命周期
  *    （"The surface has been released"）和 MediaPlayer 状态错误直接崩溃。
  *    ExoPlayer 用 texture_view + 显式 release + onPlayerError，出错只提示、不崩。
