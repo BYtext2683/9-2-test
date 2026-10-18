@@ -41,15 +41,17 @@ jobs:
             echo "MEDIAALBUM_KEY_PASSWORD=${{ secrets.MEDIAALBUM_KEY_PASSWORD }}" >> "$GITHUB_ENV"
           else
             if [ ! -f "$KS" ]; then
+              # PKCS12 密钥库要求 store 密码与 key 密码相同，keytool 会忽略不同的 -keypass，
+              # 所以这里两个密码保持一致（androidstorepass）。
               keytool -genkeypair -v -keystore "$KS" -storetype PKCS12 \
                 -alias mediaalbum -keyalg RSA -keysize 2048 -validity 10950 \
-                -storepass androidstorepass -keypass androidkeypass \
+                -storepass androidstorepass -keypass androidstorepass \
                 -dname "CN=MediaAlbum, O=MediaAlbum, C=CN"
             fi
             echo "MEDIAALBUM_STORE_FILE=$KS" >> "$GITHUB_ENV"
             echo "MEDIAALBUM_STORE_PASSWORD=androidstorepass" >> "$GITHUB_ENV"
             echo "MEDIAALBUM_KEY_ALIAS=mediaalbum" >> "$GITHUB_ENV"
-            echo "MEDIAALBUM_KEY_PASSWORD=androidkeypass" >> "$GITHUB_ENV"
+            echo "MEDIAALBUM_KEY_PASSWORD=androidstorepass" >> "$GITHUB_ENV"
           fi
 
       # 手动安装 Android SDK：不依赖 android-actions/setup-android
