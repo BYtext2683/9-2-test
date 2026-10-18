@@ -54,6 +54,8 @@ jobs:
 
       # 手动安装 Android SDK：不依赖 android-actions/setup-android
       # （该 action 会去装谷歌已下线的旧 tools 包而失败）。
+      # 注意：runner 镜像预置了指向 /usr/local/lib/android/sdk 的 ANDROID_SDK_ROOT，
+      # 必须把 ANDROID_HOME / ANDROID_SDK_ROOT 同时指到同一路径，否则 AGP 报路径冲突。
       - name: Set up Android SDK
         run: |
           SDK="$HOME/android-sdk"
@@ -63,6 +65,7 @@ jobs:
           unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools
           mv /tmp/cmdline-tools/cmdline-tools "$SDK/cmdline-tools/latest"
           echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
           echo "$SDK/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
 
       - name: Install SDK packages & accept licenses
