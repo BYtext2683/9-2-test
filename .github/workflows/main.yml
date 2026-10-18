@@ -52,8 +52,18 @@ jobs:
             echo "MEDIAALBUM_KEY_PASSWORD=androidkeypass" >> "$GITHUB_ENV"
           fi
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      # 手动安装 Android SDK：不依赖 android-actions/setup-android
+      # （该 action 会去装谷歌已下线的旧 tools 包而失败）。
+      - name: Set up Android SDK
+        run: |
+          SDK="$HOME/android-sdk"
+          mkdir -p "$SDK/cmdline-tools"
+          curl -fsSL -o /tmp/cmdline-tools.zip \
+            https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools
+          mv /tmp/cmdline-tools/cmdline-tools "$SDK/cmdline-tools/latest"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "$SDK/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
 
       - name: Install SDK packages & accept licenses
         run: |
@@ -68,7 +78,6 @@ jobs:
 
       - name: Build debug APK
         run: cd MediaAlbum && gradle :app:assembleDebug --no-daemon --stacktrace
-
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
