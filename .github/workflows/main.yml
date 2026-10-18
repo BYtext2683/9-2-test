@@ -21,8 +21,9 @@ jobs:
       # 固定签名密钥：优先使用仓库 Secrets（推荐，永久稳定）；
       # 没有配置 Secrets 时退而求其次：恢复缓存里自动生成的密钥，
       # 保证同一仓库的多次构建签名一致（缓存被清理后会重新生成，届时需重装一次）。
+      # 注意：GitHub 规定 secrets 不能直接用于 if 条件，所以这里缓存步骤无条件运行：
+      # 配置了 Secret 时，下面的解码步骤会覆盖缓存里的旧密钥，最终仍以 Secret 为准。
       - name: Restore cached signing keystore
-        if: ${{ !secrets.MEDIAALBUM_KEYSTORE_BASE64 }}
         uses: actions/cache@v4
         with:
           path: ~/.android/mediaalbum-release.jks
