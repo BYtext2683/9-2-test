@@ -18,6 +18,39 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      # 固定签名密钥：优先使用仓库 Secrets（推荐，永久稳定）；
+      # 没有配置 Secrets 时退而求其次：恢复缓存里自动生成的密钥，
+      # 保证同一仓库的多次构建签名一致（缓存被清理后会重新生成，届时需重装一次）。
+      - name: Restore cached signing keystore
+        if: ${{ !secrets.MEDIAALBUM_KEYSTORE_BASE64 }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/mediaalbum-release.jks
+          key: mediaalbum-keystore-v1
+
+      - name: Set up signing keystore
+        run: |
+          mkdir -p "$HOME/.android"
+          KS="$HOME/.android/mediaalbum-release.jks"
+          if [ -n "${{ secrets.MEDIAALBUM_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.MEDIAALBUM_KEYSTORE_BASE64 }}" | base64 -d > "$KS"
+            echo "MEDIAALBUM_STORE_FILE=$KS" >> "$GITHUB_ENV"
+            echo "MEDIAALBUM_STORE_PASSWORD=${{ secrets.MEDIAALBUM_STORE_PASSWORD }}" >> "$GITHUB_ENV"
+            echo "MEDIAALBUM_KEY_ALIAS=${{ secrets.MEDIAALBUM_KEY_ALIAS }}" >> "$GITHUB_ENV"
+            echo "MEDIAALBUM_KEY_PASSWORD=${{ secrets.MEDIAALBUM_KEY_PASSWORD }}" >> "$GITHUB_ENV"
+          else
+            if [ ! -f "$KS" ]; then
+              keytool -genkeypair -v -keystore "$KS" -storetype PKCS12 \
+                -alias mediaalbum -keyalg RSA -keysize 2048 -validity 10950 \
+                -storepass androidstorepass -keypass androidkeypass \
+                -dname "CN=MediaAlbum, O=MediaAlbum, C=CN"
+            fi
+            echo "MEDIAALBUM_STORE_FILE=$KS" >> "$GITHUB_ENV"
+            echo "MEDIAALBUM_STORE_PASSWORD=androidstorepass" >> "$GITHUB_ENV"
+            echo "MEDIAALBUM_KEY_ALIAS=mediaalbum" >> "$GITHUB_ENV"
+            echo "MEDIAALBUM_KEY_PASSWORD=androidkeypass" >> "$GITHUB_ENV"
+          fi
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 

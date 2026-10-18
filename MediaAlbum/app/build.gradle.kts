@@ -8,16 +8,35 @@ android {
     namespace = "com.example.mediaalbum"
     compileSdk = 34
 
+    // 固定签名密钥：CI 通过环境变量 MEDIAALBUM_STORE_FILE / STORE_PASSWORD /
+    // KEY_ALIAS / KEY_PASSWORD 提供。同一个密钥签出的包才能互相覆盖安装，
+    // 更新后 App 内的文件才会保留；不提供时回退到默认 debug 签名。
+    val sharedStoreFile = System.getenv("MEDIAALBUM_STORE_FILE")
+    signingConfigs {
+        if (sharedStoreFile != null) {
+            create("shared") {
+                storeFile = file(sharedStoreFile)
+                storePassword = System.getenv("MEDIAALBUM_STORE_PASSWORD") ?: ""
+                keyAlias = System.getenv("MEDIAALBUM_KEY_ALIAS") ?: ""
+                keyPassword = System.getenv("MEDIAALBUM_KEY_PASSWORD") ?: ""
+            }
+        }
+    }
+
     defaultConfig {
         applicationId = "com.example.mediaalbum"
         minSdk = 28
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
     }
 
     buildTypes {
+        getByName("debug") {
+            signingConfigs.findByName("shared")?.let { signingConfig = it }
+        }
         getByName("release") {
+            signingConfigs.findByName("shared")?.let { signingConfig = it }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

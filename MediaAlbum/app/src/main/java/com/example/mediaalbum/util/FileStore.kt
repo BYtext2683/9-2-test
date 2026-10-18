@@ -24,6 +24,9 @@ object FileStore {
 
     fun thumbFor(thumbName: String): File = File(thumbRoot, thumbName)
 
+    /** 媒体文件目录（自愈扫描用）。 */
+    fun mediaDir(): File = root
+
     fun newFileName(originalName: String): String {
         val ext = originalName.substringAfterLast('.', "")
             .lowercase()

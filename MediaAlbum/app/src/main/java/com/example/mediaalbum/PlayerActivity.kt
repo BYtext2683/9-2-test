@@ -1,11 +1,17 @@
 package com.example.mediaalbum
 
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.graphics.drawable.DrawableCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.example.mediaalbum.data.AlbumRepository
@@ -24,6 +30,16 @@ class PlayerActivity : AppCompatActivity() {
     private var items: List<MediaItem> = emptyList()
     private var sortMode: SortMode = SortMode.TIME_DESC
 
+    /** 当前是否全屏播放（false = 窗口播放） */
+    private var fullscreen = false
+
+    /** 全屏时先按返回 = 退出全屏，再按一次才退出播放页 */
+    private val backCallback = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() {
+            setFullscreen(false)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityPlayerBinding.inflate(layoutInflater)
@@ -32,6 +48,8 @@ class PlayerActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
+        onBackPressedDispatcher.addCallback(this, backCallback)
+
         val db = (application as MediaAlbumApplication).database
         repo = AlbumRepository(application, db)
 
@@ -39,6 +57,11 @@ class PlayerActivity : AppCompatActivity() {
         val startId = intent.getLongExtra(EXTRA_START_ID, -1L)
         sortMode = runCatching { SortMode.valueOf(intent.getStringExtra(EXTRA_SORT) ?: "") }
             .getOrDefault(SortMode.TIME_DESC)
+
+        // ---- 播放方向 / 全屏：恢复上次的选择 ----
+        applyOrientation(PlayerSettings.orientation(this))
+        binding.btnExitFullscreen.setOnClickListener { setFullscreen(false) }
+        setFullscreen(PlayerSettings.fullscreen(this))
 
         lifecycleScope.launch {
             val raw = when (albumId) {
@@ -69,6 +92,51 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
+    // ---------------- 播放方向 / 全屏 ----------------
+
+    private fun applyOrientation(mode: PlayOrientation) {
+        requestedOrientation = when (mode) {
+            PlayOrientation.AUTO -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            PlayOrientation.PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            PlayOrientation.LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        }
+    }
+
+    private fun setFullscreen(on: Boolean) {
+        fullscreen = on
+        PlayerSettings.setFullscreen(this, on)
+        backCallback.isEnabled = on
+        binding.btnExitFullscreen.visibility = if (on) View.VISIBLE else View.GONE
+
+        val controller = WindowInsetsControllerCompat(window, binding.root)
+        if (on) {
+            supportActionBar?.hide()
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+            controller.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        } else {
+            supportActionBar?.show()
+            controller.show(WindowInsetsCompat.Type.systemBars())
+        }
+        invalidateOptionsMenu()
+    }
+
+    private fun showOrientationDialog() {
+        val modes = PlayOrientation.values()
+        val labels = modes.map { it.label }.toTypedArray()
+        val current = modes.indexOf(PlayerSettings.orientation(this)).coerceAtLeast(0)
+        AlertDialog.Builder(this)
+            .setTitle("播放方向")
+            .setSingleChoiceItems(labels, current) { dialog, which ->
+                val mode = modes[which]
+                PlayerSettings.setOrientation(this, mode)
+                applyOrientation(mode)
+                dialog.dismiss()
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
     private fun updateTitle(pos: Int) {
         if (pos !in items.indices) return
         val item = items[pos]
@@ -80,14 +148,32 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
+    // ---------------- menu ----------------
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_player, menu)
         return true
     }
 
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        val fsItem = menu.findItem(R.id.action_fullscreen)
+        fsItem?.setIcon(if (fullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen)
+        fsItem?.title = if (fullscreen) "退出全屏" else "全屏播放"
+        // 播放页工具栏是黑底，图标固定用白色，避免浅色主题下看不清
+        tintWhite(fsItem)
+        tintWhite(menu.findItem(R.id.action_orientation))
+        return super.onPrepareOptionsMenu(menu)
+    }
+
+    private fun tintWhite(item: MenuItem?) {
+        item?.icon?.mutate()?.let { DrawableCompat.setTint(it, 0xFFFFFFFF.toInt()) }
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             android.R.id.home -> { finish(); true }
+            R.id.action_fullscreen -> { setFullscreen(!fullscreen); true }
+            R.id.action_orientation -> { showOrientationDialog(); true }
             R.id.action_rename -> { renameCurrent(); true }
             R.id.action_categorize -> { categorizeCurrent(); true }
             R.id.action_delete -> { deleteCurrent(); true }
